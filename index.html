@@ -1,0 +1,359 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Midnight Garage</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600&family=Noto+Sans+SC:wght@400;500&display=swap">
+<style>
+/* Layout: one 9:16 screen, letterboxed on wide displays; everything sits on the video. Single dark look on purpose (a night garage, gold eyes). */
+:root{
+  --night:#07090c;        /* garage black */
+  --concrete:#c9cdd2;     /* fluorescent grey text */
+  --mute:#8a9099;
+  --gold:#e7b350;         /* his eyes */
+  --gold-deep:#a8792a;
+  --glass:rgba(10,12,16,.62);
+  --line:rgba(231,179,80,.38);
+  --display:"Marcellus","Cormorant Garamond",Georgia,serif;
+  --body:"Figtree","Helvetica Neue",Arial,"Noto Sans SC","PingFang SC",sans-serif;
+  --zh:"Noto Sans SC","PingFang SC","Hiragino Sans GB",sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--night);color:var(--concrete);font-family:var(--body);overflow:hidden}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+#stage{position:relative;height:100%;max-width:calc(100vh * 9 / 16);max-width:calc(100dvh * 9 / 16);margin:0 auto;overflow:hidden;background:#000;isolation:isolate}
+video.v{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .18s linear;background:#000}
+video.v.on{opacity:1}
+.shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 18%,transparent 52%,rgba(0,0,0,.78));z-index:2}
+.shade.deep{background:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 18%,transparent 34%,rgba(0,0,0,.9))}
+/* top bar */
+#top{position:absolute;left:0;right:0;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.brand{font-family:var(--display);letter-spacing:.18em;font-size:13px;text-transform:uppercase;color:var(--concrete);display:flex;gap:10px;align-items:baseline;min-width:0}
+.brand b{color:var(--gold);font-weight:400}
+.brand span{font-family:var(--body);letter-spacing:.08em;font-size:11px;color:var(--mute);white-space:nowrap}
+.icon{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);display:grid;place-items:center;cursor:pointer;flex:none}
+.icon svg{width:18px;height:18px;display:block}
+.icon:focus-visible,.opt:focus-visible,.cta:focus-visible,#say button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* subtitles */
+#subs{position:absolute;left:0;right:0;z-index:4;bottom:calc(64px + env(safe-area-inset-bottom,0px));padding:0 max(20px,env(safe-area-inset-left,0px));text-align:center;pointer-events:none;display:flex;flex-direction:column;gap:3px;transition:bottom .25s ease}
+#subs .en{font-size:17px;line-height:1.35;color:#fff;font-weight:500;text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 14px rgba(0,0,0,.6);text-wrap:balance}
+#subs .zh{font-family:var(--zh);font-size:14px;color:#e9e3d6;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+#subs .who{font-size:10px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+#subs.you .en{color:var(--gold);font-style:italic}
+body.choosing #subs{top:auto}
+/* progress */
+#bar{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:12px}
+#track{flex:1;height:22px;display:flex;align-items:center;cursor:pointer;touch-action:none}
+#track i{display:block;height:2px;width:100%;background:rgba(255,255,255,.22);position:relative;border-radius:2px}
+#track i b{position:absolute;left:0;top:0;bottom:0;background:var(--gold);width:0;border-radius:2px}
+#chap{font-size:11px;letter-spacing:.12em;color:var(--mute);white-space:nowrap;text-transform:uppercase;font-variant-numeric:tabular-nums}
+body.choosing #bar,body.ended #bar,body.start #bar{display:none}
+/* pause badge */
+#paused{position:absolute;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none}
+#paused div{width:66px;height:66px;border-radius:50%;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.25);display:grid;place-items:center}
+/* choice sheet */
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:7;padding:0 max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:10px;transform:translateY(12px);opacity:0;transition:opacity .35s ease,transform .35s ease;pointer-events:none}
+#sheet.show{opacity:1;transform:none;pointer-events:auto}
+.cue{font-size:12px;letter-spacing:.06em;color:var(--mute);text-align:center;font-style:italic;padding-bottom:2px}
+.cue .zh{font-family:var(--zh);font-style:normal;display:block;margin-top:2px}
+.opt{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;min-height:56px;padding:11px 16px;border-radius:14px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);cursor:pointer;transition:border-color .2s,background .2s,transform .12s}
+.opt:hover{border-color:var(--gold)}
+.opt:active{transform:scale(.985)}
+.opt .en{font-size:15px;font-weight:500;color:#f4efe4;line-height:1.3}
+.opt .zh{font-family:var(--zh);font-size:12.5px;color:#cfc6b4}
+.opt.hint{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 22px rgba(231,179,80,.28)}
+#say{display:flex;gap:8px;align-items:center;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.5);padding:5px 5px 5px 14px}
+#say input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:inherit;font-size:15px;padding:8px 0}
+#say input::placeholder{color:#8f949c}
+#say button{width:40px;height:40px;border-radius:10px;border:0;background:var(--gold);color:#1a1206;display:grid;place-items:center;cursor:pointer;flex:none}
+#say button:disabled{background:#3a3d42;color:#777}
+#say button svg{width:18px;height:18px}
+.saynote{font-size:11px;color:#7d838c;text-align:center}
+/* start + end cards */
+.card{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;justify-content:flex-end;gap:16px;padding:calc(40px + env(safe-area-inset-top,0px)) max(22px,env(safe-area-inset-right,0px)) calc(30px + env(safe-area-inset-bottom,0px)) max(22px,env(safe-area-inset-left,0px));background:linear-gradient(to bottom,rgba(4,5,7,.15),rgba(4,5,7,.25) 35%,rgba(4,5,7,.92) 72%)}
+.card[hidden]{display:none!important}
+#endCard{background:linear-gradient(to bottom,rgba(4,5,7,.55),rgba(4,5,7,.88) 30%,rgba(4,5,7,.96));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);justify-content:center}
+.kicker{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+.card h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,10vw,46px);line-height:1.02;margin:0;color:#f6f1e6;letter-spacing:.02em;text-wrap:balance}
+.card h1 em{font-style:normal;color:var(--gold)}
+.card p{margin:0;font-size:15px;line-height:1.5;color:#d4d7dc;max-width:34ch}
+.card p.zh{font-family:var(--zh);font-size:13.5px;color:#b9bdc4;margin-top:-8px}
+.cta{align-self:stretch;min-height:54px;border-radius:14px;border:0;background:var(--gold);color:#1b1307;font-weight:600;font-size:16px;letter-spacing:.04em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+.cta.ghost{flex-direction:column;gap:1px;font-size:14px;line-height:1.25;background:transparent;border:1px solid rgba(255,255,255,.25);color:#e8e8e8;font-weight:500}
+.cta.ghost .zh{font-size:12px;color:#aab0b8}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--mute);letter-spacing:.04em}
+.meta span::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold-deep);margin-right:7px;vertical-align:middle}
+.path{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px;color:#cfd2d7}
+.path li{display:flex;gap:10px;align-items:baseline}
+.path li b{font-weight:500;color:var(--gold);font-size:11px;letter-spacing:.14em;min-width:22px}
+.path li .zh{font-family:var(--zh);color:#9ea3ab;font-size:12px}
+.tease{border-left:2px solid var(--gold);padding:2px 0 2px 12px;font-size:13.5px;line-height:1.5;color:#d9dbe0}
+.tease .zh{font-family:var(--zh);display:block;color:#a7abb2;font-size:12.5px;margin-top:3px}
+/* menu */
+#menu{position:absolute;z-index:9;top:calc(58px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));min-width:200px;background:rgba(14,16,20,.96);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:6px;display:flex;flex-direction:column}
+#menu button{background:none;border:0;text-align:left;padding:11px 12px;border-radius:9px;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+#menu button:hover{background:rgba(255,255,255,.06)}
+#menu button small{color:var(--mute)}
+#toast{position:absolute;z-index:10;left:50%;top:calc(64px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.14);padding:8px 14px;border-radius:999px;font-size:12.5px;white-space:nowrap}
+.dots{display:inline-flex;gap:4px}.dots i{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:d 1s infinite}.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes d{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+body.lang-en .zh{display:none!important}
+</style>
+
+<div id="stage">
+  <video class="v" id="va" playsinline webkit-playsinline preload="auto"></video>
+  <video class="v" id="vb" playsinline webkit-playsinline preload="auto"></video>
+  <div class="shade" id="shade"></div>
+  <div id="paused" hidden><div><svg viewBox="0 0 24 24" width="26" height="26" fill="#fff"><path d="M8 5.5v13l10.5-6.5z"/></svg></div></div>
+
+  <header id="top">
+    <div class="brand"><b>Magnus</b> Midnight Garage <span>EP 1</span></div>
+    <button class="icon" id="menuBtn" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="#e8e8e8" stroke-width="1.8" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
+  </header>
+  <nav id="menu" hidden>
+    <button id="mLang"><span>Subtitles</span><small id="mLangV"></small></button>
+    <button id="mBack"><span>Back to last choice <span class="zh">· 返回上一个选择</span></span></button>
+    <button id="mRestart"><span>Restart episode <span class="zh">· 回到开场</span></span></button>
+  </nav>
+
+  <div id="subs" aria-live="polite"></div>
+
+  <div id="bar">
+    <button class="icon" id="playBtn" aria-label="Pause"><svg viewBox="0 0 24 24" fill="#eee" id="playIco"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button>
+    <div id="track" role="slider" aria-label="Clip progress" aria-valuemin="0" aria-valuemax="100" tabindex="0"><i><b id="fill"></b></i></div>
+    <div id="chap"></div>
+  </div>
+
+  <section id="sheet" aria-label="Your choice">
+    <div class="cue" id="cue"></div>
+    <button class="opt" id="optA"></button>
+    <button class="opt" id="optB"></button>
+    <form id="say" autocomplete="off">
+      <input id="sayIn" maxlength="80" placeholder="Or say it your way…" aria-label="Say something to Magnus">
+      <button id="sayBtn" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+    </form>
+  </section>
+
+  <section class="card" id="startCard">
+    <div class="kicker">Interactive Episode 1 <span class="zh">· 互动短剧 第 1 集</span></div>
+    <h1>He gets engaged in <em>ten minutes.</em></h1>
+    <p>Tonight, in the hotel garage, a stranger's eyes turn gold the moment he catches your scent. Every choice is yours.</p>
+    <p class="zh">十分钟后，他就要宣布订婚。今晚在酒店地下车库，这个陌生男人闻到你的气味，眼睛变成了金色。每一个选择，都由你来做。</p>
+    <div class="meta"><span>3 choices <span class="zh">3 个选择</span></span><span>2 endings <span class="zh">2 个结局</span></span><span>≈2 min <span class="zh">约 2 分钟</span></span><span>Sound on <span class="zh">请开声音</span></span></div>
+    <button class="cta" id="startBtn"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>Start <span class="zh">开始</span></button>
+  </section>
+
+  <section class="card" id="endCard" hidden>
+    <div class="kicker" id="endKicker"></div>
+    <h1 id="endTitle"></h1>
+    <p id="endLine"></p>
+    <p class="zh" id="endLineZh"></p>
+    <ul class="path" id="endPath"></ul>
+    <div class="tease" id="endTease"></div>
+    <div class="row">
+      <button class="cta ghost" id="endBack">Change last choice <span class="zh">换个选择</span></button>
+      <button class="cta ghost" id="endReplay">Replay ending <span class="zh">重看结局</span></button>
+    </div>
+    <button class="cta" id="endRestart">Play from the start <span class="zh">从头再来</span></button>
+  </section>
+  <div id="toast" hidden></div>
+</div>
+
+<script>
+const STORY = {"clips": {"OPEN": {"file": "OPEN", "chap": "Opening", "music": "hook", "vol": 0.22, "pre": ["IDLE0", "R1A", "R1B", "T1a"], "src": "media/OPEN.mp4"}, "IDLE0": {"file": "IDLE0", "loop": true, "src": "media/IDLE0.mp4"}, "R1A": {"file": "R1A", "chap": "01 · Wrist", "music": "proximity", "vol": 0.16, "pre": ["T1a", "T1b"], "src": "media/R1A.mp4"}, "R1B": {"file": "R1B", "chap": "01 · Wrist", "music": "proximity", "vol": 0.16, "pre": ["T1a", "T1b"], "src": "media/R1B.mp4"}, "T1a": {"file": "T1a", "chap": "01 · The call", "music": "confrontation", "vol": 0.15, "pre": ["T1b", "IDLE1"], "src": "media/T1a.mp4"}, "T1b": {"file": "T1b", "chap": "01 · The call", "music": "confrontation", "vol": 0.15, "pre": ["IDLE1", "R2A1", "R2B1"], "src": "media/T1b.mp4"}, "IDLE1": {"file": "IDLE1", "loop": true, "src": "media/IDLE1.mp4"}, "R2A1": {"file": "R2A1", "chap": "02 · Once", "music": "revelation", "vol": 0.24, "pre": ["R2A2", "IDLE2"], "src": "media/R2A1.mp4"}, "R2A2": {"file": "R2A2", "chap": "02 · Once", "music": "surrender", "vol": 0.2, "pre": ["IDLE2", "E1a1", "E2a1"], "trim": 5.05, "src": "media/R2A2.mp4"}, "R2B1": {"file": "R2B1", "chap": "02 · What he is", "music": "confrontation", "vol": 0.18, "pre": ["R2B2", "IDLE2"], "src": "media/R2B1.mp4"}, "R2B2": {"file": "R2B2", "chap": "02 · What he is", "music": "confrontation", "vol": 0.18, "pre": ["IDLE2", "E1a1", "E2a1"], "src": "media/R2B2.mp4"}, "IDLE2": {"file": "IDLE2", "loop": true, "src": "media/IDLE2.mp4"}, "E1a1": {"file": "E1a1", "chap": "03 · The car", "music": "surrender", "vol": 0.22, "pre": ["E1a2", "E1b"], "src": "media/E1a1.mp4"}, "E1a2": {"file": "E1a2", "chap": "03 · The car", "music": "surrender", "vol": 0.22, "pre": ["E1b"], "src": "media/E1a2.mp4"}, "E1b": {"file": "E1b", "chap": "03 · The car", "music": "surrender", "vol": 0.24, "src": "media/E1b.mp4"}, "E2a1": {"file": "E2a1", "chap": "03 · The lift", "music": "entrance", "vol": 0.18, "pre": ["E2a2", "E2b"], "src": "media/E2a1.mp4"}, "E2a2": {"file": "E2a2", "chap": "03 · The lift", "music": "entrance", "vol": 0.2, "pre": ["E2b"], "src": "media/E2a2.mp4"}, "E2b": {"file": "E2b", "chap": "03 · The lift", "music": "entrance", "vol": 0.24, "src": "media/E2b.mp4"}}, "music": {"hook": "audio/MUS_MAGNUS_HOOK_V2.mp3", "proximity": "audio/MUS_MAGNUS_PROXIMITY_V2.mp3", "confrontation": "audio/MUS_MAGNUS_CONFRONTATION_V2.mp3", "revelation": "audio/MUS_MAGNUS_REVELATION_V2.mp3", "surrender": "audio/MUS_MAGNUS_SURRENDER_V2.mp3", "entrance": "audio/MUS_MAGNUS_ENTRANCE_V2.mp3", "restraint": "audio/MUS_MAGNUS_RESTRAINT_V1.mp3", "trust": "audio/MUS_MAGNUS_TRUST_V1.mp3", "conflict": "audio/MUS_MAGNUS_CONFLICT_V1.mp3"}, "nodes": {"C1": {"type": "choice", "idle": "IDLE0", "music": "restraint", "line": {"en": "Tell me… where did you come from?", "zh": "告诉我……你到底是从哪里来的？"}, "cue": {"en": "His hand is still around your wrist. Loosely.", "zh": "他的手还扣着你的手腕，力道已经松了。"}, "options": [{"id": "c1_answer", "en": "(Don't pull away.) I'm the photographer for the party upstairs. What's wrong with your eyes?", "zh": "（不挣开）我是楼上宴会的摄影师。你的眼睛怎么回事？", "seq": ["R1A", "T1a", "T1b"], "next": "C2"}, {"id": "c1_boundary", "en": "Let go of me. Step back and explain.", "zh": "放开我。退后，说清楚。", "seq": ["R1B", "T1a", "T1b"], "next": "C2"}]}, "C2": {"type": "choice", "idle": "IDLE1", "music": "restraint", "line": {"en": "Let me… once. I need to know you're real.", "zh": "让我……就一次。我得确认你是真的。"}, "cue": {"en": "Arm's length. He hasn't touched you. He's asking.", "zh": "一臂远。他没有碰你。他在问你。"}, "options": [{"id": "c2_allow", "en": "(Tilt your head.) …Once.", "zh": "（偏过头）……就一次。", "seq": ["R2A1", "R2A2"], "next": "C3"}, {"id": "c2_refuse", "en": "No. First tell me what you are.", "zh": "不行。先告诉我，你到底是什么。", "seq": ["R2B1", "R2B2"], "next": "C3"}]}, "C3": {"type": "choice", "idle": "IDLE2", "music": "restraint", "line": {"en": "Come with me.", "zh": "跟我走。"}, "cue": {"en": "The rear door is open. Upstairs, his engagement starts in eight minutes.", "zh": "后门开着。楼上，他的订婚宣布还有八分钟。"}, "options": [{"id": "c3_go", "en": "(Get in the car.)", "zh": "（坐进车里）", "seq": ["E1a1", "E1a2", "E1b"], "next": "END1"}, {"id": "c3_leave", "en": "I'm leaving. On my own.", "zh": "我自己走。", "seq": ["E2a1", "E2a2", "E2b"], "next": "END2"}]}, "END1": {"type": "end", "music": "trust", "kicker": {"en": "Ending 1 of 2", "zh": "结局 1 / 2"}, "title": "Midnight <em>Escape</em>", "line": {"en": "You got in. Upstairs, a ballroom is waiting for a groom who isn't coming.", "zh": "你上了车。楼上，整个宴会厅还在等一个不会出现的新郎。"}, "tease": {"en": "Next · Episode 2: The pack learns their Alpha left with a human. Selene doesn't lose quietly.", "zh": "下一集 · 第 2 集：狼群发现他们的 Alpha 带走了一个人类。Selene 不会安静地认输。"}}, "END2": {"type": "end", "music": "conflict", "kicker": {"en": "Ending 2 of 2", "zh": "结局 2 / 2"}, "title": "Out of His <em>Territory</em>", "line": {"en": "You walked away, and he let you. But he has your name now.", "zh": "你走了，他也放你走了。可他已经知道你的名字。"}, "tease": {"en": "Next · Episode 2: 7 a.m. Black roses at your door. No card. Just a scent you recognise.", "zh": "下一集 · 第 2 集：早上七点，门口一束黑玫瑰。没有卡片，只有一缕你认得的气味。"}}}, "voice": {"c2_once": "audio/voice/c2_once.mp3", "c1_fear": "audio/voice/c1_fear.mp3", "c1_help": "audio/voice/c1_help.mp3", "c1_insult": "audio/voice/c1_insult.mp3", "c3_mate": "audio/voice/c3_mate.mp3", "c1_name": "audio/voice/c1_name.mp3", "c1_eyes": "audio/voice/c1_eyes.mp3", "c3_job": "audio/voice/c3_job.mp3", "c2_flirt": "audio/voice/c2_flirt.mp3", "c3_engaged": "audio/voice/c3_engaged.mp3", "c3_where": "audio/voice/c3_where.mp3", "c3_safe": "audio/voice/c3_safe.mp3", "c2_fb1": "audio/voice/c2_fb1.mp3", "c1_why": "audio/voice/c1_why.mp3", "c2_fb0": "audio/voice/c2_fb0.mp3", "c1_flirt": "audio/voice/c1_flirt.mp3", "c3_fb1": "audio/voice/c3_fb1.mp3", "c2_fear": "audio/voice/c2_fear.mp3", "c3_fear": "audio/voice/c3_fear.mp3", "c3_fb0": "audio/voice/c3_fb0.mp3", "c2_what": "audio/voice/c2_what.mp3", "c1_fb1": "audio/voice/c1_fb1.mp3", "c1_fb0": "audio/voice/c1_fb0.mp3", "c2_camera": "audio/voice/c2_camera.mp3", "c2_engaged": "audio/voice/c2_engaged.mp3"}};
+const CUES = {"R1A": [{"s": 1.38, "e": 4.63, "en": "A photographer. You came to shoot my engagement.", "zh": "摄影师。你是来拍我订婚的。", "who": "Magnus"}, {"s": 4.9, "e": 7.01, "en": "The eyes? That's your doing.", "zh": "眼睛？那是你害的。", "who": "Magnus"}, {"s": 7.26, "e": 8.13, "en": "Stay.", "zh": "待着。", "who": "Magnus"}], "R1B": [{"s": 3.51, "e": 5.14, "en": "Your scent came through that window.", "zh": "你的气味从那扇车窗飘了进来。", "who": "Magnus"}, {"s": 5.19, "e": 7.78, "en": "And something in me woke up.", "zh": "我身体里有个东西醒了。", "who": "Magnus"}], "T1a": [{"s": 2.3, "e": 6.23, "en": "Mr. Thorne. Harland moved the engagement announcement up. Ten minutes. Where are you?", "zh": "Thorne 先生，Harland 把订婚宣布提前了，还有十分钟。您在哪？", "who": "Luca · phone"}, {"s": 6.28, "e": 10.37, "en": "Luca. Kill the garage cameras. Three minutes. Nobody comes down.", "zh": "Luca，关掉车库监控。三分钟，谁也别下来。", "who": "Magnus"}], "T1b": [{"s": 5.75, "e": 7.14, "en": "Let me… once.", "zh": "让我……就一次。", "who": "Magnus"}, {"s": 7.19, "e": 10.1, "en": "I need to know you're real.", "zh": "我得确认你是真的。", "who": "Magnus"}], "R2A1": [{"s": 4.47, "e": 6.78, "en": "There you are.", "zh": "原来你在这里。", "who": "Magnus"}, {"s": 8.31, "e": 8.66, "en": "Mate.", "zh": "我的 Mate。", "who": "Magnus"}, {"s": 8.71, "e": 10.36, "en": "That's what you are to me.", "zh": "这就是你对我的意义。", "who": "Magnus"}], "R2A2": [{"s": 3.03, "e": 5.04, "en": "Come with me.", "zh": "跟我走。", "who": "Magnus"}], "R2B1": [{"s": 2.74, "e": 4.65, "en": "My kind has a word for you.", "zh": "在我们这一族，有个词是用来称呼你的。", "who": "Magnus"}, {"s": 4.7, "e": 5.47, "en": "Mate.", "zh": "Mate。", "who": "Magnus"}, {"s": 5.52, "e": 10.23, "en": "And upstairs, I was ten minutes from saying yes to someone else.", "zh": "而楼上，再过十分钟，我就要答应娶另一个人。", "who": "Magnus"}], "R2B2": [{"s": 3.38, "e": 6.11, "en": "Come with me. I'll tell you the rest.", "zh": "跟我走。剩下的，我告诉你。", "who": "Magnus"}], "E1a1": [], "E1a2": [{"s": 0.44, "e": 1.67, "en": "Drive.", "zh": "开车。", "who": "Magnus"}], "E1b": [{"s": 3.96, "e": 6.15, "en": "They'll come looking for you now.", "zh": "现在，他们会来找你了。", "who": "Magnus"}, {"s": 8.66, "e": 9.59, "en": "Let them.", "zh": "让他们来。", "who": "Magnus"}], "E2a1": [{"s": 8.18, "e": 9.69, "en": "Run, then.", "zh": "那就跑吧。", "who": "Magnus"}], "E2a2": [{"s": 5.05, "e": 6.66, "en": "I'll find you.", "zh": "我会找到你。", "who": "Magnus"}], "OPEN": [{"s": 10.9, "e": 11.950000000000001, "zh": "别动。", "en": "Don't move.", "who": "Magnus"}, {"s": 16.3, "e": 17.3, "zh": "告诉我……", "en": "Tell me...", "who": "Magnus"}, {"s": 17.7, "e": 19.1, "zh": "你到底是从哪里来的？", "en": "Where did you come from?", "who": "Magnus"}]};
+const REPLIES = {"C1": {"intents": [{"id": "c1_name", "kw": ["who are you", "your name", "name?", "who r u", "你是谁", "名字", "你叫"], "en": "Magnus Thorne. Remember it. You'll be hearing it again.", "zh": "Magnus Thorne。记住这个名字，你还会再听到的。"}, {"id": "c1_eyes", "kw": ["eye", "gold", "glow", "yellow", "眼睛", "金色", "瞳", "发光"], "en": "They were brown an hour ago. Then you walked past my car.", "zh": "一小时前它们还是棕色的。然后你从我车边走过。"}, {"id": "c1_fear", "kw": ["scared", "afraid", "hurt", "pain", "frighten", "害怕", "怕", "疼", "痛", "吓"], "en": "Say the word and I let go. ...You haven't said it yet.", "zh": "你说一个字，我就放手。……可你还没说。"}, {"id": "c1_help", "kw": ["police", "help", "scream", "security", "call", "911", "报警", "救命", "保安", "喊人"], "en": "Scream if you want. Nobody in this building will touch you. I'd make sure of it.", "zh": "想喊就喊。这栋楼里没人会碰你。我保证。"}, {"id": "c1_flirt", "kw": ["handsome", "hot", "cute", "sexy", "kiss", "pretty", "帅", "好看", "亲", "性感", "可爱"], "en": "Careful. You don't get to tease me twice.", "zh": "小心点。撩我这种事，你没有第二次机会。"}, {"id": "c1_insult", "kw": ["creep", "crazy", "jerk", "freak", "weird", "psycho", "变态", "神经", "混蛋", "疯", "有病"], "en": "Probably. And yet you're still standing here.", "zh": "也许吧。可你还站在这里。"}, {"id": "c1_why", "kw": ["why", "what do you want", "want from me", "为什么", "想干嘛", "你想怎样", "干什么"], "en": "I don't know yet. That has never happened to me before.", "zh": "我还不知道。这种事，我从来没遇到过。"}], "suggest": [{"option": "c1_answer", "kw": ["photographer", "upstairs", "party", "camera", "photo", "work here", "摄影", "楼上", "宴会", "拍照", "工作"]}, {"option": "c1_boundary", "kw": ["let go", "let me go", "step back", "back off", "release", "放开", "松手", "退后", "别碰"]}], "fallback": [{"en": "That's not what I asked. Where did you come from?", "zh": "我问的不是这个。你是从哪里来的？"}, {"en": "You talk. I listen. But I'm still waiting for an answer.", "zh": "你说，我听着。但我还在等你的答案。"}]}, "C2": {"intents": [{"id": "c2_what", "kw": ["what are you", "wolf", "werewolf", "monster", "vampire", "human", "你是什么", "狼", "怪物", "人类", "吸血鬼"], "en": "Something your stories got wrong. Let me prove you're real first.", "zh": "你们故事里写错了的东西。先让我确认你是真的。"}, {"id": "c2_once", "kw": ["once what", "let you what", "what do you mean", "do what", "一次什么", "什么意思", "做什么", "干什么"], "en": "Breathe you in. That's all. Nothing you don't give me.", "zh": "闻一闻你。只是这样。你不给的，我不拿。"}, {"id": "c2_engaged", "kw": ["engage", "fianc", "marry", "wedding", "harland", "订婚", "未婚妻", "结婚", "婚"], "en": "A contract my family signed. Not one I chose.", "zh": "那是我家族签的契约，不是我选的。"}, {"id": "c2_camera", "kw": ["camera", "cameras", "why kill", "监控", "摄像"], "en": "Three minutes where nobody owns this moment but us.", "zh": "三分钟。这三分钟里，谁也管不着我们。"}, {"id": "c2_fear", "kw": ["scared", "afraid", "hurt", "frighten", "害怕", "怕", "疼", "吓"], "en": "Then step back. I won't follow. I'm asking, not taking.", "zh": "那就后退。我不会跟上来。我是在问你，不是在抢。"}, {"id": "c2_flirt", "kw": ["kiss", "handsome", "hot", "cute", "sexy", "帅", "亲", "性感", "可爱"], "en": "Don't. I'm holding on by a thread as it is.", "zh": "别这样。我现在全靠一根线吊着理智。"}], "suggest": [{"option": "c2_allow", "kw": ["yes", "okay", "ok", "go ahead", "once", "fine", "sure", "可以", "好", "来吧", "就一次", "行"]}, {"option": "c2_refuse", "kw": ["no", "don't", "not yet", "explain", "tell me first", "不行", "不要", "不可以", "先告诉我", "说清楚"]}], "fallback": [{"en": "Yes or no. I can take either. I can't take waiting.", "zh": "行，或者不行。哪个我都受得住，我受不住的是等。"}, {"en": "Your heart's racing. I can hear it from here. Answer me.", "zh": "你的心跳得很快，我在这里都听得见。回答我。"}]}, "C3": {"intents": [{"id": "c3_where", "kw": ["where", "take me", "destination", "去哪", "去什么地方", "带我"], "en": "Somewhere nobody tells you what you're allowed to want.", "zh": "去一个没人规定你能想要什么的地方。"}, {"id": "c3_engaged", "kw": ["engage", "fianc", "selene", "marry", "wedding", "订婚", "未婚妻", "结婚", "婚"], "en": "Upstairs is a contract. You're the only thing tonight I chose.", "zh": "楼上是一纸契约。你是我今晚唯一自己选的。"}, {"id": "c3_safe", "kw": ["safe", "trust", "hurt me", "kill", "kidnap", "安全", "相信", "伤害", "绑架"], "en": "Say stop and the car stops. I'll open the door myself.", "zh": "你说停，车就停。我亲手给你开门。"}, {"id": "c3_job", "kw": ["job", "work", "photos", "boss", "工作", "照片", "老板", "活动"], "en": "Bring your camera. I'll give you something worth shooting.", "zh": "带上你的相机。我给你值得拍的东西。"}, {"id": "c3_fear", "kw": ["scared", "afraid", "frighten", "害怕", "怕", "吓"], "en": "I know. Come anyway, or don't. Both are yours to choose.", "zh": "我知道。来，或者不来。都由你选。"}, {"id": "c3_mate", "kw": ["mate", "what's a mate", "伴侣", "命定", "mate是"], "en": "It means I'd burn this whole night down before I let you go unnoticed.", "zh": "意思是，我宁可把今晚烧了，也不会当作没遇见你。"}], "suggest": [{"option": "c3_go", "kw": ["get in", "go with", "come with", "let's go", "take me", "drive", "上车", "跟你走", "一起走", "走吧", "带我走"]}, {"option": "c3_leave", "kw": ["leave", "go home", "goodbye", "bye", "on my own", "not going", "离开", "回家", "再见", "我自己走", "不去"]}], "fallback": [{"en": "The door's open. It won't stay open all night.", "zh": "门开着。但它不会开一整夜。"}, {"en": "Ask me anything. In the car.", "zh": "想问什么都行。上车问。"}]}};
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const va = $('va'), vb = $('vb');
+let front = va, back = vb;
+const bgm = new Audio(); bgm.loop = true; bgm.volume = 0;
+const voice = new Audio();
+let state = { node: null, queue: [], clip: null, path: [], checkpoint: null, busy: false };
+let lang = 'zh';
+try { const saved = localStorage.getItem('mg-lang'); lang = saved || ((navigator.language||'').toLowerCase().startsWith('zh') ? 'zh' : 'en'); } catch(e) { lang = (navigator.language||'').toLowerCase().startsWith('zh') ? 'zh' : 'en'; }
+function applyLang(){ document.body.classList.toggle('lang-en', lang==='en'); $('mLangV').textContent = lang==='en' ? 'English' : 'English + 中文'; }
+applyLang();
+
+const src = id => STORY.clips[id].src;
+function setMode(m){ document.body.classList.remove('start','choosing','ended','playing'); document.body.classList.add(m); }
+setMode('start');
+
+// ---------- poster ----------
+$('stage').style.backgroundImage = 'url(media/poster.jpg)'; $('stage').style.backgroundSize = 'cover'; $('stage').style.backgroundPosition = 'center';
+
+// ---------- music ----------
+let bgmTarget = 0, bgmName = null;
+function music(name, vol){
+  if (name !== bgmName && name){ bgmName = name; const t = bgm.currentTime; bgm.src = STORY.music[name]; bgm.currentTime = 0; bgm.play().catch(()=>{}); }
+  bgmTarget = name ? vol : 0;
+}
+setInterval(() => { const d = bgmTarget - bgm.volume; if (Math.abs(d) > .01) bgm.volume = Math.max(0, Math.min(1, bgm.volume + Math.sign(d) * .02)); }, 60);
+
+// ---------- subtitles ----------
+const subs = $('subs');
+function showSub(cue, who){
+  if (!cue){ subs.innerHTML=''; subs.classList.remove('you'); return; }
+  subs.classList.toggle('you', who === 'you');
+  subs.innerHTML = (who ? `<div class="who">${who==='you'?'You':who}</div>`:'') + `<div class="en">${esc(cue.en)}</div>` + (cue.zh ? `<div class="zh">${esc(cue.zh)}</div>` : '');
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+let lastCueKey = '', holdUntil = 0;
+function tickSubs(){
+  if (!state.clip || document.body.classList.contains('choosing') || performance.now() < holdUntil) return;
+  const t = front.currentTime, list = CUES[state.clip] || [];
+  let c = null; for (const q of list){ if (t >= q.s && t <= q.e){ c = q; break; } }
+  const key = c ? state.clip + c.s : '';
+  if (key !== lastCueKey){ lastCueKey = key; showSub(c, c && c.who); }
+}
+
+// ---------- playback ----------
+function swap(){ const f = front; front = back; back = f; front.classList.add('on'); back.classList.remove('on'); }
+function preload(ids){ /* warm the HTTP cache for upcoming clips */
+  ids.forEach(id => { if (!id || preload.done[id]) return; preload.done[id] = 1; const v = document.createElement('video'); v.preload = 'auto'; v.muted = true; v.src = src(id); v.load(); preload.keep.push(v); });
+}
+preload.done = {}; preload.keep = [];
+
+function playClip(id){
+  state.clip = id; lastCueKey = ''; showSub(null);
+  const c = STORY.clips[id];
+  back.loop = !!c.loop; back.muted = !!c.loop; back.src = src(id); back.currentTime = 0;
+  const go = () => { back.play().then(() => { swap(); front.onended = c.loop ? null : onClipEnd; setTimeout(() => { if(!back.classList.contains('on')){ back.pause(); } }, 250); }).catch(() => { swap(); toast(lang==='en'?'Tap to play':'点一下继续播放'); front.onended = c.loop ? null : onClipEnd; $('paused').hidden = false; }); };
+  if (back.readyState >= 2) go(); else back.addEventListener('loadeddata', go, { once:true });
+  if (c.music) music(c.music, c.vol ?? .22);
+  $('chap').textContent = c.chap || '';
+  preload(c.pre || []);
+}
+function onClipEnd(){
+  if (state.queue.length){ playClip(state.queue.shift()); return; }
+  const n = STORY.nodes[state.node];
+  enter(n.next);
+}
+function runSequence(seq, after){ state.queue = seq.slice(1); STORY.nodes.__seq = { next: after }; state.node = '__seq'; playClip(seq[0]); }
+
+function enter(nodeId){
+  const n = STORY.nodes[nodeId]; state.node = nodeId;
+  if (n.type === 'choice') return openChoice(nodeId);
+  if (n.type === 'end') return showEnd(nodeId);
+}
+
+// ---------- choices ----------
+function optHTML(o){ return `<span class="en">${esc(o.en)}</span><span class="zh">${esc(o.zh)}</span>`; }
+function openChoice(id){
+  const n = STORY.nodes[id];
+  state.checkpoint = { node: id, path: state.path.slice() };
+  setMode('choosing'); $('shade').classList.add('deep');
+  playClip(n.idle); music(n.music, .3);
+  showSub(n.line, 'Magnus');
+  $('cue').innerHTML = `${esc(n.cue.en)}<span class="zh">${esc(n.cue.zh)}</span>`;
+  const [A,B] = n.options;
+  $('optA').innerHTML = optHTML(A); $('optB').innerHTML = optHTML(B);
+  $('optA').onclick = () => choose(A); $('optB').onclick = () => choose(B);
+  [$('optA'),$('optB')].forEach(b => b.classList.remove('hint'));
+  $('sayIn').value = ''; $('sayBtn').disabled = false;
+  setTimeout(() => { $('sheet').classList.add('show'); placeSubs(); }, 200);
+  preload(n.options.map(o => o.seq[0]));
+}
+function placeSubs(){ subs.style.bottom = document.body.classList.contains('choosing') ? ($('sheet').offsetHeight + 14) + 'px' : ''; }
+addEventListener('resize', placeSubs);
+function closeChoice(){ subs.style.bottom=''; $('sheet').classList.remove('show'); voice.pause(); $('shade').classList.remove('deep'); }
+function choose(o){
+  if (state.busy) return; state.busy = true; setTimeout(()=>state.busy=false, 600);
+  closeChoice(); setMode('playing');
+  state.path.push({ node: state.node, id: o.id, en: o.en, zh: o.zh });
+  try { localStorage.setItem('mg-path', JSON.stringify(state.path)); } catch(e){}
+  runSequence(o.seq, o.next);
+  showSub({ en: o.en, zh: o.zh }, 'you'); holdUntil = performance.now() + 1500; lastCueKey = 'you';
+}
+
+// ---------- free input: Magnus answers in his own voice, the scene waits ----------
+function norm(s){ return ' ' + s.toLowerCase().replace(/[’']/g,"'").replace(/[^\p{L}\p{N}' ]+/gu,' ').replace(/\s+/g,' ') + ' '; }
+function hit(text, kws){ return kws.some(k => { const kk = k.toLowerCase(); return /[一-鿿]/.test(kk) ? text.includes(kk) : text.includes(' ' + kk.replace(/[^\p{L}\p{N}' ]+/gu,' ').trim() + (kk.endsWith('?')?'':'')) ; }); }
+const fbCount = {};
+$('say').addEventListener('submit', e => {
+  e.preventDefault();
+  const raw = $('sayIn').value.trim(); if (!raw) return;
+  const node = state.node, R = REPLIES[node]; if (!R) return;
+  $('sayIn').value = '';
+  const t = norm(raw);
+  showSub({ en: raw }, 'you');
+  let reply = null, key = null;
+  for (const it of R.intents){ if (hit(t, it.kw)){ reply = it; key = it.id; break; } }
+  let sug = null; for (const s of R.suggest){ if (hit(t, s.kw)){ sug = s.option; break; } }
+  if (!reply && !sug){ const i = (fbCount[node] = (fbCount[node]||0)) % R.fallback.length; fbCount[node]++; reply = R.fallback[i]; key = node.toLowerCase() + '_fb' + i; }
+  $('sayBtn').disabled = true;
+  setTimeout(() => {
+    if (reply){
+      showSub(reply, 'Magnus');
+      if (STORY.voice[key]){ voice.src = STORY.voice[key]; voice.volume = 1; bgm.volume = Math.min(bgm.volume, .12); voice.play().catch(()=>{}); }
+    }
+    [$('optA'),$('optB')].forEach(b => b.classList.remove('hint'));
+    if (sug){
+      const n = STORY.nodes[node]; const idx = n.options.findIndex(o => o.id === sug);
+      const btn = idx === 0 ? $('optA') : $('optB'); btn.classList.add('hint');
+      if (!reply) showSub({ en: lang==='en' ? 'Sounds like this one. Tap it to do it.' : 'Sounds like this one. Tap it to do it.', zh: '像是这个选择——点一下就这么做。' }, '');
+    }
+    $('sayBtn').disabled = false;
+  }, 450);
+});
+
+// ---------- endings ----------
+function showEnd(id){
+  const n = STORY.nodes[id]; setMode('ended'); showSub(null);
+  music(n.music, .32);
+  $('endKicker').innerHTML = `${esc(n.kicker.en)} <span class="zh">· ${esc(n.kicker.zh)}</span>`;
+  $('endTitle').innerHTML = n.title;
+  $('endLine').textContent = n.line.en; $('endLineZh').textContent = n.line.zh;
+  $('endPath').innerHTML = state.path.map((p,i) => `<li><b>0${i+1}</b><span>${esc(p.en)} <span class="zh">${esc(p.zh)}</span></span></li>`).join('');
+  $('endTease').innerHTML = `${esc(n.tease.en)}<span class="zh">${esc(n.tease.zh)}</span>`;
+  $('endCard').hidden = false;
+  try { const seen = JSON.parse(localStorage.getItem('mg-endings')||'[]'); if (!seen.includes(id)) seen.push(id); localStorage.setItem('mg-endings', JSON.stringify(seen)); } catch(e){}
+}
+$('endReplay').onclick = () => { $('endCard').hidden = true; const last = state.path[state.path.length-1]; const o = STORY.nodes[last.node].options.find(x => x.id === last.id); setMode('playing'); runSequence(o.seq, o.next); };
+$('endBack').onclick = () => { $('endCard').hidden = true; backToChoice(); };
+$('endRestart').onclick = () => { $('endCard').hidden = true; restart(); };
+
+function backToChoice(){
+  const cp = state.checkpoint; if (!cp) return restart();
+  state.path = cp.path.slice(); state.queue = []; closeChoice(); enter(cp.node);
+}
+function restart(){
+  state = { node: null, queue: [], clip: null, path: [], checkpoint: null, busy:false };
+  closeChoice(); setMode('playing'); $('endCard').hidden = true;
+  runSequence(['OPEN'], 'C1');
+}
+
+// ---------- start ----------
+$('startBtn').onclick = () => {
+  $('startCard').hidden = true; front.muted = false; setMode('playing');
+  bgm.src = STORY.music.hook; bgm.play().catch(()=>{}); bgmName = 'hook'; bgmTarget = .25;
+  runSequence(['OPEN'], 'C1');
+};
+
+// ---------- controls ----------
+function togglePause(){
+  if (!document.body.classList.contains('playing')) return;
+  if (front.paused){ front.play(); $('paused').hidden = true; } else { front.pause(); $('paused').hidden = false; }
+}
+$('stage').addEventListener('click', e => { if (e.target.closest('button,#sheet,#bar,#menu,.card,#top')) return; togglePause(); });
+$('playBtn').onclick = togglePause;
+front.addEventListener && [va,vb].forEach(v => { v.addEventListener('play', () => { if (v===front){ $('playIco').innerHTML = '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>'; $('paused').hidden = true; } }); v.addEventListener('pause', () => { if (v===front && !v.ended) $('playIco').innerHTML = '<path d="M8 5.5v13l10.5-6.5z"/>'; }); });
+function seekFrom(ev){ const r = $('track').getBoundingClientRect(); const x = (ev.touches?ev.touches[0].clientX:ev.clientX) - r.left; const p = Math.max(0, Math.min(1, x / r.width)); if (front.duration) front.currentTime = p * front.duration * .999; }
+$('track').addEventListener('pointerdown', e => { seekFrom(e); const mv = ev => seekFrom(ev); const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); }; addEventListener('pointermove', mv); addEventListener('pointerup', up); });
+$('track').addEventListener('keydown', e => { if (e.key==='ArrowRight') front.currentTime += 2; if (e.key==='ArrowLeft') front.currentTime -= 2; });
+(function loop(){ if (front.duration && !STORY.clips[state.clip]?.loop) $('fill').style.width = (front.currentTime / front.duration * 100) + '%'; tickSubs(); requestAnimationFrame(loop); })();
+
+$('menuBtn').onclick = () => { const m = $('menu'); m.hidden = !m.hidden; $('menuBtn').setAttribute('aria-expanded', String(!m.hidden)); };
+$('mLang').onclick = () => { lang = lang==='en' ? 'zh' : 'en'; try{localStorage.setItem('mg-lang',lang);}catch(e){} applyLang(); };
+$('mBack').onclick = () => { $('menu').hidden = true; $('endCard').hidden = true; if ($('startCard').hidden) backToChoice(); };
+$('mRestart').onclick = () => { $('menu').hidden = true; $('startCard').hidden = true; front.muted = false; restart(); };
+function toast(t){ const el = $('toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 1800); }
+document.addEventListener('visibilitychange', () => { if (document.hidden){ bgm.pause(); } else if (bgmTarget>0){ bgm.play().catch(()=>{}); } });
+})();
+</script>
